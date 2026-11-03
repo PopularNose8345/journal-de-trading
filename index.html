@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Journal de trading</title>
+<style>
+:root{--bg:#f4f5f7;--sf:#fff;--line:#dfe2e8;--tx:#14171f;--mu:#6b7280;--ac:#1b2a49;--acx:#fff;--pos:#1f7a4d;--neg:#b4443a;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1322;--sf:#111b2f;--line:#22304a;--tx:#e8ecf4;--mu:#8b97ad;--ac:#9db4e3;--acx:#0b1322;--pos:#5fbf8f;--neg:#e07a70;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0b1322;--sf:#111b2f;--line:#22304a;--tx:#e8ecf4;--mu:#8b97ad;--ac:#9db4e3;--acx:#0b1322;--pos:#5fbf8f;--neg:#e07a70;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums}
+main{max-width:640px;margin:0 auto;padding:20px 16px 56px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+h1{font-size:1.35rem;font-weight:650;letter-spacing:-.01em;margin:0}
+h2{font-size:1rem;font-weight:600;margin:0 0 12px}
+section{background:var(--sf);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+button,input,select,textarea{font:inherit;color:inherit}
+.ghost{background:none;border:1px solid var(--line);border-radius:8px;padding:6px 12px;color:var(--mu);cursor:pointer}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.stat{padding:2px 0}
+.stat b{display:block;font-size:1.6rem;font-weight:650;letter-spacing:-.02em}
+.stat span{color:var(--mu);font-size:.85rem}
+.pos{color:var(--pos)}.neg{color:var(--neg)}
+svg.curve{width:100%;height:110px;display:block}
+.empty{color:var(--mu);margin:0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:.85rem;color:var(--mu)}
+input,select,textarea{width:100%;margin-top:4px;padding:10px;background:var(--bg);border:1px solid var(--line);border-radius:8px}
+textarea{resize:vertical;min-height:64px}
+.full{grid-column:1/-1}
+.primary{width:100%;margin-top:12px;padding:12px;background:var(--ac);color:var(--acx);border:0;border-radius:8px;font-weight:600;cursor:pointer}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.trade{padding:12px 0;border-top:1px solid var(--line)}
+.trade:first-of-type{border-top:0;padding-top:0}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.row strong{font-weight:600}
+.meta{color:var(--mu);font-size:.85rem}
+.note{margin:6px 0 0;font-size:.92rem}
+.del{background:none;border:0;color:var(--mu);cursor:pointer;padding:0;font-size:.85rem;text-decoration:underline}
+details summary{cursor:pointer;font-weight:600}
+details textarea{min-height:90px;font-size:.8rem}
+.btns{display:flex;gap:8px;margin-top:8px}
+.btns button{flex:1}
+</style>
+</head>
+<body>
+<main>
+<header><h1>Journal de trading</h1><button class="ghost" id="theme" type="button">Thème</button></header>
+
+<section>
+<div class="stats" id="stats"></div>
+</section>
+
+<section>
+<h2>Courbe en R</h2>
+<div id="curve"></div>
+</section>
+
+<section>
+<h2>Nouveau trade</h2>
+<form id="f">
+<div class="grid">
+<label>Date<input type="date" id="date" required></label>
+<label>Actif<input type="text" id="asset" placeholder="EUR/USD, AAPL…" required></label>
+<label>Sens<select id="dir"><option value="long">Achat (long)</option><option value="short">Vente (short)</option></select></label>
+<label>Émotion<select id="emo"><option>Calme</option><option>Confiant</option><option>Stressé</option><option>Impatient</option><option>Peur de rater</option><option>Envie de me refaire</option></select></label>
+<label>Entrée<input type="number" id="entry" step="any" required inputmode="decimal"></label>
+<label>Sortie<input type="number" id="exit" step="any" required inputmode="decimal"></label>
+<label class="full">Stop-loss (optionnel, pour calculer le R)<input type="number" id="stop" step="any" inputmode="decimal"></label>
+<label class="full">Note (pourquoi ce trade ? qu’as-tu appris ?)<textarea id="note"></textarea></label>
+</div>
+<button class="primary" type="submit">Enregistrer le trade</button>
+</form>
+</section>
+
+<section>
+<h2>Historique</h2>
+<div id="list"></div>
+</section>
+
+<section>
+<details>
+<summary>Sauvegarde</summary>
+<p class="meta">Tes trades sont stockés sur cet appareil. Exporte-les pour les garder ou les déplacer vers un autre appareil.</p>
+<textarea id="bk" placeholder="Colle ici une sauvegarde à importer"></textarea>
+<div class="btns"><button class="ghost" id="exp" type="button">Exporter</button><button class="ghost" id="imp" type="button">Importer</button></div>
+<p class="meta" id="bkmsg"></p>
+</details>
+</section>
+</main>
+
+<script>
+(function(){
+var KEY='journal-trades-v1',trades=[];
+function load(){try{var r=JSON.parse(localStorage.getItem(KEY));return Array.isArray(r)?r:[]}catch(e){return[]}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(trades))}catch(e){}}
+function $(i){return document.getElementById(i)}
+function esc(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML}
+function calc(t){var d=t.dir==='long'?1:-1,mv=(t.exit-t.entry)*d,rk=t.stop?Math.abs(t.entry-t.stop):0;return{pct:t.entry?mv/t.entry*100:0,r:rk?mv/rk:null,win:mv>0}}
+function fmt(n,u){var s=(n>0?'+':'')+n.toFixed(2).replace('.',',');return s+u}
+function cls(n){return n>0?'pos':n<0?'neg':''}
+
+function renderStats(){
+var n=trades.length,c=trades.map(calc),wins=c.filter(function(x){return x.win}).length;
+var rs=c.map(function(x){return x.r}).filter(function(x){return x!==null});
+var tot=rs.reduce(function(a,b){return a+b},0),avg=rs.length?tot/rs.length:null;
+function s(v,l,k){return '<div class="stat"><b class="'+(k||'')+'">'+v+'</b><span>'+l+'</span></div>'}
+$('stats').innerHTML=s(n,'Trades')+s(n?Math.round(wins/n*100)+' %':'–','Trades gagnants')+s(rs.length?fmt(tot,' R'):'–','Total en R',rs.length?cls(tot):'')+s(avg!==null?fmt(avg,' R'):'–','R moyen par trade',avg!==null?cls(avg):'');
+}
+
+function renderCurve(){
+var rs=trades.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.id-b.id}).map(calc).map(function(x){return x.r}).filter(function(x){return x!==null});
+if(rs.length<2){$('curve').innerHTML='<p class="empty">Ajoute au moins 2 trades avec un stop-loss pour voir ta courbe.</p>';return}
+var cum=[0],i;for(i=0;i<rs.length;i++)cum.push(cum[i]+rs[i]);
+var mn=Math.min.apply(null,cum),mx=Math.max.apply(null,cum),rg=(mx-mn)||1;
+var pts=cum.map(function(v,k){return (k/(cum.length-1)*300).toFixed(1)+','+(96-((v-mn)/rg)*88).toFixed(1)}).join(' ');
+var zero=(96-((0-mn)/rg)*88).toFixed(1);
+$('curve').innerHTML='<svg class="curve" viewBox="0 0 300 104" preserveAspectRatio="none" role="img" aria-label="Courbe cumulée en R"><line x1="0" x2="300" y1="'+zero+'" y2="'+zero+'" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/><polyline points="'+pts+'" fill="none" stroke="var(--ac)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>';
+}
+
+function renderList(){
+if(!trades.length){$('list').innerHTML='<p class="empty">Aucun trade pour l’instant. Enregistre le premier ci-dessus.</p>';return}
+var sorted=trades.slice().sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:b.id-a.id});
+$('list').innerHTML=sorted.map(function(t){
+var c=calc(t),res=fmt(c.pct,' %')+(c.r!==null?' · '+fmt(c.r,' R'):'');
+return '<div class="trade"><div class="row"><strong>'+esc(t.asset)+' <span class="meta">'+(t.dir==='long'?'Achat':'Vente')+'</span></strong><strong class="'+cls(c.pct)+'">'+res+'</strong></div>'
++'<div class="meta">'+esc(t.date)+' · '+esc(t.entry)+' → '+esc(t.exit)+(t.stop?' · stop '+esc(t.stop):'')+' · '+esc(t.emo)+'</div>'
++(t.note?'<p class="note">'+esc(t.note)+'</p>':'')
++'<button class="del" data-id="'+t.id+'" type="button">Supprimer</button></div>';
+}).join('');
+}
+
+function render(){renderStats();renderCurve();renderList()}
+
+$('date').value=new Date().toISOString().slice(0,10);
+$('f').addEventListener('submit',function(e){
+e.preventDefault();
+var t={id:Date.now(),date:$('date').value,asset:$('asset').value.trim(),dir:$('dir').value,emo:$('emo').value,entry:parseFloat($('entry').value),exit:parseFloat($('exit').value),stop:parseFloat($('stop').value)||null,note:$('note').value.trim()};
+if(!t.asset||isNaN(t.entry)||isNaN(t.exit))return;
+trades.push(t);save();render();
+$('asset').value='';$('entry').value='';$('exit').value='';$('stop').value='';$('note').value='';
+});
+$('list').addEventListener('click',function(e){
+var id=e.target.getAttribute&&e.target.getAttribute('data-id');
+if(!id)return;
+if(confirm('Supprimer ce trade ?')){trades=trades.filter(function(t){return String(t.id)!==id});save();render()}
+});
+$('exp').addEventListener('click',function(){
+var j=JSON.stringify(trades);$('bk').value=j;$('bk').select();
+var ok=false;try{ok=navigator.clipboard&&navigator.clipboard.writeText(j)}catch(e){}
+$('bkmsg').textContent=ok?'Sauvegarde copiée. Colle-la dans une note pour la garder.':'Sélectionne le texte ci-dessus et copie-le pour le garder.';
+});
+$('imp').addEventListener('click',function(){
+try{var r=JSON.parse($('bk').value);if(!Array.isArray(r))throw 0;
+if(confirm('Remplacer les trades actuels par cette sauvegarde ?')){trades=r;save();render();$('bkmsg').textContent='Sauvegarde importée.'}}
+catch(e){$('bkmsg').textContent='Sauvegarde invalide. Colle le texte exporté en entier.'}
+});
+$('theme').addEventListener('click',function(){
+var r=document.documentElement,dark=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme: dark)').matches);
+r.setAttribute('data-theme',dark?'light':'dark');
+});
+
+trades=load();render();
+})();
+</script>
+</body>
+</html>
